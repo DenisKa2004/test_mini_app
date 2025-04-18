@@ -5,12 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Runner Game</title>
   <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #eee;
+    }
+  
     canvas {
-      border: 1px solid black;
       display: block;
+      width: 100%;
+      height: auto;
+      max-width: 800px;
       margin: 0 auto;
+      border: 2px solid #000;
     }
   </style>
+  
 </head>
 <body>
   <canvas id="gameCanvas" width="800" height="400"></canvas>
