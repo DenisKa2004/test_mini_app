@@ -2,109 +2,19 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Кто ты по профессии?</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Runner Game</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #38b2ac, #63b3ed);
-      color: #fff;
-      text-align: center;
-      padding: 40px 20px;
-    }
-    .container {
-      max-width: 600px;
+    canvas {
+      border: 1px solid black;
+      display: block;
       margin: 0 auto;
-      background-color: rgba(0, 0, 0, 0.2);
-      padding: 30px;
-      border-radius: 20px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.2);
-    }
-    button {
-      background-color: #fff;
-      color: #333;
-      padding: 12px 24px;
-      margin: 10px;
-      font-size: 1em;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    button:hover {
-      background-color: #edf2f7;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🎓 Кто ты по профессии?</h1>
-    <p id="question">Начнём!</p>
-    <div id="buttons"></div>
-  </div>
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
 
-  <script>
-    const questions = [
-      {
-        text: "Тебе нравится работать с техникой?",
-        options: [
-          { text: "Да", type: "tech" },
-          { text: "Нет", type: "hum" }
-        ]
-      },
-      {
-        text: "Любишь помогать другим людям?",
-        options: [
-          { text: "Да", type: "hum" },
-          { text: "Нет", type: "tech" }
-        ]
-      },
-      {
-        text: "Интересны ли тебе компьютеры и роботы?",
-        options: [
-          { text: "Да", type: "tech" },
-          { text: "Не очень", type: "hum" }
-        ]
-      }
-    ];
-
-    let current = 0;
-    let score = { tech: 0, hum: 0 };
-
-    function showQuestion() {
-      if (current >= questions.length) {
-        showResult();
-        return;
-      }
-
-      const q = questions[current];
-      document.getElementById("question").textContent = q.text;
-
-      const buttonsDiv = document.getElementById("buttons");
-      buttonsDiv.innerHTML = "";
-
-      q.options.forEach(opt => {
-        const btn = document.createElement("button");
-        btn.textContent = opt.text;
-        btn.onclick = () => {
-          score[opt.type]++;
-          current++;
-          showQuestion();
-        };
-        buttonsDiv.appendChild(btn);
-      });
-    }
-
-    function showResult() {
-      const resultText = score.tech > score.hum
-        ? "👨‍💻 Тебе подойдут технические профессии: инженер, программист, робототехник!"
-        : "👩‍🏫 Тебе подойдут гуманитарные профессии: педагог, дизайнер, психолог!";
-      
-      document.getElementById("question").textContent = "Результат:";
-      document.getElementById("buttons").innerHTML = `<p style="font-size: 1.3em;">${resultText}</p>`;
-    }
-
-    showQuestion();
-  </script>
+  <script src="game.js"></script>
 </body>
 </html>
-
