@@ -2,7 +2,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const spriteSheet = new Image();
-spriteSheet.src = "path/to/spritesheet.png"; // Путь к твоему спрайт-листу
+spriteSheet.src = "main/spritesheet.png"; // Путь к твоему спрайт-листу
 
 const frameWidth = 64;  // Ширина одного кадра
 const frameHeight = 64; // Высота одного кадра
