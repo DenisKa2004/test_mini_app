@@ -44,6 +44,11 @@ let velocity = 0;
 let gravity = 0.6;
 let jumpPower = -14;
 
+let scaleX = 1;
+let scaleY = 1;
+const GAME_WIDTH = 400;
+const GAME_HEIGHT = 800;
+
 let score = 0;
 let gameOver = false;
 
@@ -70,21 +75,22 @@ let coins = [];
 
 // Обновление размера канваса для адаптивности
 function resizeCanvas() {
-  const aspectRatio = 800 / 400;  // Исходное соотношение сторон
   const windowWidth = window.innerWidth;
   const windowHeight = window.innerHeight;
+  const aspectRatio = GAME_WIDTH / GAME_HEIGHT;
 
-  // Расчёт новых размеров канваса
   if (windowWidth / windowHeight > aspectRatio) {
-    canvas.width = windowHeight * aspectRatio;
     canvas.height = windowHeight;
+    canvas.width = windowHeight * aspectRatio;
   } else {
     canvas.width = windowWidth;
     canvas.height = windowWidth / aspectRatio;
   }
-  canvas.style.width = `${canvas.width}px`;
-  canvas.style.height = `${canvas.height}px`;
+
+  scaleX = canvas.width / GAME_WIDTH;
+  scaleY = canvas.height / GAME_HEIGHT;
 }
+
 
 // Слушаем событие изменения размера окна
 window.addEventListener("resize", resizeCanvas);
@@ -298,6 +304,7 @@ function restartGame() {
 }
 
 function gameLoop(currentTime) {
+  ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0); // масштабирование
   drawBackground();
   updateAnimation(currentTime);
   drawPlatformsAndObstacles();
@@ -307,6 +314,19 @@ function gameLoop(currentTime) {
   if (gameOver) drawGameOverScreen();
   requestAnimationFrame(gameLoop);
 }
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / scaleX;
+  const y = (e.clientY - rect.top) / scaleY;
+
+  if (gameOver) {
+    restartGame();
+  } else if (!isJumping && isGrounded) {
+    velocity = jumpPower;
+    isJumping = true;
+  }
+});
+
 
 runSprite.onload = () => {
   requestAnimationFrame(gameLoop);
