@@ -3,12 +3,14 @@ window.onload = function() {
   const canvas = document.getElementById("gameCanvas");
   const ctx    = canvas.getContext("2d");
 
+  
   // Фиксируем внутреннее разрешение канваса
   const GAME_WIDTH  = 400;
   const GAME_HEIGHT = 800;
   canvas.width  = GAME_WIDTH;
   canvas.height = GAME_HEIGHT;
-
+  let scaleX = canvas.width  / GAME_WIDTH;
+  let scaleY = canvas.height / GAME_HEIGHT;
   let scrollOffset = 0;
   const gameSpeed = 3;
 
@@ -55,6 +57,19 @@ window.onload = function() {
     { file: '02_trees_and_bushes.png', speed: 0.7, img: new Image() },
     { file: '01_ground.png', speed: 1, img: new Image() }
   ];
+
+  function resizeCanvasResolution() {
+    const isLandscape = window.innerWidth > window.innerHeight;
+    if (isLandscape) {
+      canvas.width  = GAME_HEIGHT;
+      canvas.height = GAME_WIDTH;
+    } else {
+      canvas.width  = GAME_WIDTH;
+      canvas.height = GAME_HEIGHT;
+    }
+  }
+  window.addEventListener('resize', resizeCanvasResolution);
+  resizeCanvasResolution();
   let loadedBg = 0;
   bgLayers.forEach(layer => {
     layer.img.src = layer.file;
@@ -113,12 +128,12 @@ window.onload = function() {
   function drawParallax() {
     bgLayers.forEach(layer => {
       if (layer.speed === 0) {
-        ctx.drawImage(layer.img, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+        ctx.drawImage(layer.img, 0, 0, canvas.width, canvas.height);
       } else {
-        let x = -(scrollOffset * layer.speed) % GAME_WIDTH;
-        if (x > 0) x -= GAME_WIDTH;
-        ctx.drawImage(layer.img, x, 0, GAME_WIDTH, GAME_HEIGHT);
-        ctx.drawImage(layer.img, x + GAME_WIDTH, 0, GAME_WIDTH, GAME_HEIGHT);
+        let x = -(scrollOffset * layer.speed) % canvas.width;
+        if (x > 0) x -= canvas.width;
+        ctx.drawImage(layer.img, x, 0, canvas.width, canvas.height);
+        ctx.drawImage(layer.img, x + canvas.width, 0, canvas.width, canvas.height);
       }
     });
   }
@@ -149,16 +164,16 @@ window.onload = function() {
     obstacles = obstacles.map(o => ({ ...o, x: o.x - gameSpeed })).filter(o => o.x + o.w > 0);
     coins = coins.map(c => ({ ...c, x: c.x - gameSpeed })).filter(c => c.x + c.size > 0);
     score += 0.05;
-    if (platforms[platforms.length-1].x + platforms[platforms.length-1].w < GAME_WIDTH) {
+    if (platforms[platforms.length-1].x + platforms[platforms.length-1].w < canvas.width) {
       const newX = platforms[platforms.length-1].x + platforms[platforms.length-1].w;
       platforms.push({ x: newX, y: 320, w: 300 + Math.random()*200, h: 20 });
     }
     if (Math.random() < 0.008) {
       const isFlying = Math.random() < 0.5;
-      if (isFlying) obstacles.push({ x: GAME_WIDTH, y: character.y - 60, w: 30, h: 30 });
-      else obstacles.push({ x: GAME_WIDTH, y: platforms[platforms.length-1].y - 30, w: 30, h: 30 });
+      if (isFlying) obstacles.push({ x: canvas.width, y: character.y - 60, w: 30, h: 30 });
+      else obstacles.push({ x: canvas.width, y: platforms[platforms.length-1].y - 30, w: 30, h: 30 });
     }
-    if (Math.random() < 0.02) coins.push({ x: GAME_WIDTH, y: Math.random()*(GAME_HEIGHT-50), size: 32 });
+    if (Math.random() < 0.02) coins.push({ x: canvas.width, y: Math.random()*(canvas.height-50), size: 32 });
   }
 
   // Draw functions
@@ -179,13 +194,16 @@ window.onload = function() {
     const hb = getHitbox(); ctx.strokeStyle = 'red'; ctx.strokeRect(hb.x, hb.y, hb.w, hb.h);
   }
   function drawScore() {
-    ctx.fillStyle = '#000'; ctx.font = '24px Arial'; ctx.fillText('Очки: ' + Math.floor(score), 20, 30);
+    ctx.fillText('Очки: '+Math.floor(score), 20 * scaleX, 30 * scaleY);
   }
   function drawGameOver() {
-    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
-    ctx.fillStyle = '#fff'; ctx.font = '36px Arial'; ctx.textAlign = 'center';
-    ctx.fillText('Игра окончена', GAME_WIDTH/2, GAME_HEIGHT/2 - 20);
-    ctx.font = '24px Arial'; ctx.fillText('Клик для рестарта', GAME_WIDTH/2, GAME_HEIGHT/2 + 20);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText('Игра окончена',      canvas.width/2,  canvas.height/2 - 20);
+    ctx.font      = '24px Arial';
+    ctx.fillText('Клик для рестарта', canvas.width/2,  canvas.height/2 + 20);
     ctx.textAlign = 'left';
   }
   function getHitbox() { return { x: character.x - character.offX + character.hbX, y: character.y - character.offY + character.hbY, w: character.w, h: character.h }; }
@@ -197,7 +215,7 @@ window.onload = function() {
   if (loadedBg === bgLayers.length) initGame();
 
   function gameLoop(timestamp) {
-    ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   
     drawParallax();
     drawPlatforms();
