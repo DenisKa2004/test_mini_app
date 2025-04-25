@@ -165,18 +165,18 @@ window.onload = function() {
   function updateAnimation(dt) {
     if (gameOver || isPaused) return;
     const hb = getHitbox();
-
+  
     if (dt - lastFrameTime > animationSpeed) {
       lastFrameTime = dt;
       if (isJumping) jumpFrame = (jumpFrame + 1) % jumpFrames;
       else          currentFrame = (currentFrame + 1) % runFrames;
     }
-
+  
     // Физика
     character.y += velocity;
     velocity += gravity;
     isGrounded = false;
-
+  
     platforms.forEach(p => {
       if (
         character.y + character.h >= p.y &&
@@ -190,7 +190,7 @@ window.onload = function() {
         isJumping   = false;
       }
     });
-
+  
     // Столкновения с препятствиями
     obstacles.forEach(o => {
       if (
@@ -202,7 +202,7 @@ window.onload = function() {
         gameOver = true;
       }
     });
-
+  
     // Сбор монет
     coins = coins.filter(c => {
       if (
@@ -216,14 +216,19 @@ window.onload = function() {
       }
       return true;
     });
-
+  
+    // Обновление скорости игры в зависимости от очков
+    if (Math.floor(score / 10) > Math.floor((score - 0.05) / 10)) {
+      gameSpeed += 0.1; // Увеличиваем скорость игры каждые 10 очков
+    }
+  
     // Сдвиг объектов влево
     platforms = platforms.map(p => ({ ...p, x: p.x - gameSpeed }));
     obstacles = obstacles.map(o => ({ ...o, x: o.x - gameSpeed })).filter(o => o.x + o.w > 0);
     coins     = coins.map(c => ({ ...c, x: c.x - gameSpeed })).filter(c => c.x + c.size > 0);
-
+  
     score += 0.05;
-
+  
     // Генерация новой платформы
     const lastPlat = platforms[platforms.length -1];
     if (lastPlat.x + lastPlat.w < canvas.width) {
@@ -234,7 +239,7 @@ window.onload = function() {
         h: 20
       });
     }
-
+  
     // Новые препятствия и монеты
     if (Math.random() < 0.008) {
       const lastObstacle = obstacles[obstacles.length - 1];
@@ -247,8 +252,6 @@ window.onload = function() {
       }
     }
     
-    
-    
     if (Math.random() < 0.008) {
       const lastCoin = coins[coins.length - 1];
       const minCoinDistance = 100;
@@ -257,11 +260,12 @@ window.onload = function() {
         const platform = platforms[platforms.length - 1];
         const coinX = canvas.width;
         const coinY = platform.y - (40 + Math.random() * 30);
-
+  
         coins.push({ x: coinX, y: coinY });
       }
     }
   }
+  
 
   function drawPlatforms() {
     ctx.fillStyle = "#654321";
