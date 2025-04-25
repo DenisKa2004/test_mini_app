@@ -1,333 +1,229 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+// game.js
+window.onload = function() {
+  const canvas = document.getElementById("gameCanvas");
+  const ctx    = canvas.getContext("2d");
 
-const runSprite = new Image();
-runSprite.src = "spritesheet.png";
+  // Фиксируем внутреннее разрешение канваса
+  const GAME_WIDTH  = 400;
+  const GAME_HEIGHT = 800;
+  canvas.width  = GAME_WIDTH;
+  canvas.height = GAME_HEIGHT;
 
-const jumpSprite = new Image();
-jumpSprite.src = "spritesheet_jump.png";
+  let scrollOffset = 0;
+  const gameSpeed = 3;
 
-const coinImage = new Image();
-coinImage.src = "coin.png"; // Монетка (размером 32x32 например)
+  // Анимация
+  const runFrames  = 15;
+  const jumpFrames = 15;
+  const animationSpeed = 50;
 
-const obstacleImage = new Image();
-obstacleImage.src = "obstacle.png"; // твоя текстура препятствий
+  // Физика
+  const gravity   = 0.6;
+  const jumpPower = -14;
 
-const flyingObstacleImage = new Image();
-flyingObstacleImage.src = "obstacle_flying.png"; // для летающих препятствий
+  // Состояние
+  let currentFrame   = 0;
+  let jumpFrame      = 0;
+  let lastFrameTime  = 0;
+  let isJumping      = false;
+  let isGrounded     = true;
+  let velocity       = 0;
+  let score          = 0;
+  let isPaused       = false;
+  let gameOver       = false;
 
-// Кнопка паузы
-const pauseButton = document.createElement("button");
-pauseButton.textContent = "⏸ Пауза";
-pauseButton.style.position = "absolute";
-pauseButton.style.top = "10px";
-pauseButton.style.right = "10px";
-pauseButton.style.zIndex = 10;
-pauseButton.onclick = () => isPaused = !isPaused;
-document.body.appendChild(pauseButton);
+  // Персонаж
+  const character = { x:100, y:200, baseY:200,
+    spriteW:128, spriteH:118, offX:34, offY:7,
+    w:30, h:90, hbX:15, hbY:4 };
 
-let isPaused = false;
+  let platforms = [{ x:0, y:320, w:800, h:20 }];
+  let obstacles = [];
+  let coins     = [];
 
-const frameWidth = 128;
-const frameHeight = 118;
-const runFrames = 15;
-const jumpFrames = 15;
+  // Load images
+  const bgLayers = [
+    { file: '11_background.png', speed: 0, img: new Image() },
+    { file: '10_distant_clouds.png', speed: 0.1, img: new Image() },
+    { file: '09_distant_clouds1.png', speed: 0.12, img: new Image() },
+    { file: '08_clouds.png', speed: 0.2, img: new Image() },
+    { file: '07_huge_clouds.png', speed: 0.25, img: new Image() },
+    { file: '06_hill2.png', speed: 0.3, img: new Image() },
+    { file: '05_hill1.png', speed: 0.35, img: new Image() },
+    { file: '04_bushes.png', speed: 0.45, img: new Image() },
+    { file: '03_distant_trees.png', speed: 0.5, img: new Image() },
+    { file: '02_trees_and_bushes.png', speed: 0.7, img: new Image() },
+    { file: '01_ground.png', speed: 1, img: new Image() }
+  ];
+  let loadedBg = 0;
+  bgLayers.forEach(layer => {
+    layer.img.src = layer.file;
+    layer.img.onload = () => {
+      loadedBg++;
+      if (loadedBg === bgLayers.length) initGame();
+    };
+    layer.img.onerror = () => console.error(`${layer.file} not found`);
+  });
 
-let currentFrame = 0;
-let jumpFrame = 0;
-let animationSpeed = 50;
-let lastFrameTime = 0;
+  const runSprite = new Image(); runSprite.src = "spritesheet.png";
+  const jumpSprite = new Image(); jumpSprite.src = "spritesheet_jump.png";
+  const coinImage = new Image(); coinImage.src = "coin.png";
+  const obstacleImage = new Image(); obstacleImage.src = "obstacle.png";
 
-let isJumping = false;
-let isGrounded = true;
-let velocity = 0;
-let gravity = 0.6;
-let jumpPower = -14;
+  // Setup pause button
+  document.getElementById('pauseBtn').onclick = () => { isPaused = !isPaused; };
 
-let scaleX = 1;
-let scaleY = 1;
-const GAME_WIDTH = 400;
-const GAME_HEIGHT = 800;
+  // Responsive canvas
+  function resizeCanvas() {
+    const ww = window.innerWidth;
+    const wh = window.innerHeight;
+    const ar = GAME_WIDTH / GAME_HEIGHT;
+    if (ww / wh > ar) {
+      canvas.height = wh;
+      canvas.width = wh * ar;
+    } else {
+      canvas.width = ww;
+      canvas.height = ww / ar;
+    }
+    scaleX = canvas.width / GAME_WIDTH;
+    scaleY = canvas.height / GAME_HEIGHT;
+  }
+  window.addEventListener('resize', resizeCanvas);
 
-let score = 0;
-let gameOver = false;
+  // Input
+  canvas.addEventListener('click', handleInput);
+  canvas.addEventListener('touchstart', handleInput);
+  function handleInput() {
+    if (gameOver) restartGame();
+    else if (!isJumping && isGrounded) {
+      isJumping  = true;
+      isGrounded = false;
+      velocity   = jumpPower;
+      jumpFrame  = 0;
+    }
+  }
 
-const character = {
-  x: 100,
-  y: 200,
-  baseY: 200,
-  spriteWidth: 128,
-  spriteHeight: 118,
-  offsetX: 34,
-  offsetY: 7,
-  width: 30,
-  height: 90,
-  hitboxOffsetX: 15,
-  hitboxOffsetY: 4
+  // Initialize game after backgrounds loaded
+  function initGame() {
+    //resizeCanvas();
+    requestAnimationFrame(gameLoop);
+  }
+
+  // Draw parallax background
+  function drawParallax() {
+    bgLayers.forEach(layer => {
+      if (layer.speed === 0) {
+        ctx.drawImage(layer.img, 0, 0, GAME_WIDTH, GAME_HEIGHT);
+      } else {
+        let x = -(scrollOffset * layer.speed) % GAME_WIDTH;
+        if (x > 0) x -= GAME_WIDTH;
+        ctx.drawImage(layer.img, x, 0, GAME_WIDTH, GAME_HEIGHT);
+        ctx.drawImage(layer.img, x + GAME_WIDTH, 0, GAME_WIDTH, GAME_HEIGHT);
+      }
+    });
+  }
+
+  // Update animation & physics
+  function updateAnimation(deltaTime) {
+    if (gameOver || isPaused) return;
+    const hitbox = getHitbox();
+    if (deltaTime - lastFrameTime > animationSpeed) {
+      lastFrameTime = deltaTime;
+      if (isJumping) jumpFrame = (jumpFrame + 1) % jumpFrames;
+      else currentFrame = (currentFrame + 1) % runFrames;
+    }
+    character.y += velocity;
+    velocity += gravity;
+    isGrounded = false;
+    platforms.forEach(p => {
+      if (character.y + character.h >= p.y && character.y + character.h <= p.y + velocity + 5 && character.x + character.w > p.x && character.x < p.x + p.w) {
+        character.y = p.y - character.h;
+        velocity = 0;
+        isGrounded = true;
+        isJumping = false;
+      }
+    });
+    obstacles.forEach(o => { if (hitbox.x < o.x + o.w && hitbox.x + hitbox.w > o.x && hitbox.y < o.y + o.h && hitbox.y + hitbox.h > o.y) gameOver = true; });
+    coins.forEach((c,i) => { if (hitbox.x < c.x + c.size && hitbox.x + hitbox.w > c.x && hitbox.y < c.y + c.size && hitbox.y + hitbox.h > c.y) { coins.splice(i,1); score += 10; }});
+    platforms = platforms.map(p => ({ ...p, x: p.x - gameSpeed }));
+    obstacles = obstacles.map(o => ({ ...o, x: o.x - gameSpeed })).filter(o => o.x + o.w > 0);
+    coins = coins.map(c => ({ ...c, x: c.x - gameSpeed })).filter(c => c.x + c.size > 0);
+    score += 0.05;
+    if (platforms[platforms.length-1].x + platforms[platforms.length-1].w < GAME_WIDTH) {
+      const newX = platforms[platforms.length-1].x + platforms[platforms.length-1].w;
+      platforms.push({ x: newX, y: 320, w: 300 + Math.random()*200, h: 20 });
+    }
+    if (Math.random() < 0.008) {
+      const isFlying = Math.random() < 0.5;
+      if (isFlying) obstacles.push({ x: GAME_WIDTH, y: character.y - 60, w: 30, h: 30 });
+      else obstacles.push({ x: GAME_WIDTH, y: platforms[platforms.length-1].y - 30, w: 30, h: 30 });
+    }
+    if (Math.random() < 0.02) coins.push({ x: GAME_WIDTH, y: Math.random()*(GAME_HEIGHT-50), size: 32 });
+  }
+
+  // Draw functions
+  function drawPlatforms() {
+    ctx.fillStyle = "#654321";
+    platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
+  }
+  function drawObstacles() {
+    obstacles.forEach(o => ctx.drawImage(obstacleImage, o.x, o.y, o.w, o.h));
+  }
+  function drawCoins() {
+    coins.forEach(c => ctx.drawImage(coinImage, c.x, c.y, c.size, c.size));
+  }
+  function drawCharacter() {
+    const sprite = isJumping ? jumpSprite : runSprite;
+    const frame = isJumping ? jumpFrame : currentFrame;
+    ctx.drawImage(sprite, frame * character.spriteW, 0, character.spriteW, character.spriteH, character.x - character.offX, character.y - character.offY, character.spriteW, character.spriteH);
+    const hb = getHitbox(); ctx.strokeStyle = 'red'; ctx.strokeRect(hb.x, hb.y, hb.w, hb.h);
+  }
+  function drawScore() {
+    ctx.fillStyle = '#000'; ctx.font = '24px Arial'; ctx.fillText('Очки: ' + Math.floor(score), 20, 30);
+  }
+  function drawGameOver() {
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
+    ctx.fillStyle = '#fff'; ctx.font = '36px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('Игра окончена', GAME_WIDTH/2, GAME_HEIGHT/2 - 20);
+    ctx.font = '24px Arial'; ctx.fillText('Клик для рестарта', GAME_WIDTH/2, GAME_HEIGHT/2 + 20);
+    ctx.textAlign = 'left';
+  }
+  function getHitbox() { return { x: character.x - character.offX + character.hbX, y: character.y - character.offY + character.hbY, w: character.w, h: character.h }; }
+  function restartGame() {
+    platforms = [{ x: 0, y: 320, w: 800, h: 20 }]; obstacles = []; coins = []; score = 0; character.y = character.baseY; velocity = 0; currentFrame = jumpFrame = lastFrameTime = 0; gameOver = false;
+  }
+
+  // Start if backgrounds already loaded
+  if (loadedBg === bgLayers.length) initGame();
+
+  function gameLoop(timestamp) {
+    ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  
+    drawParallax();
+    drawPlatforms();
+    drawObstacles();
+    drawCoins();
+    drawCharacter();
+    drawScore();
+  
+    if (gameOver) {
+      drawGameOver();
+    } else if (!isPaused) {
+      updateAnimation(timestamp);
+      scrollOffset += gameSpeed;
+    }
+  
+    requestAnimationFrame(gameLoop);
+  }
+  
 };
 
-let platforms = [
-  { x: 0, y: 320, width: 800, height: 20 },
-];
-
-let obstacles = [];
-let coins = [];
-
-// Обновление размера канваса для адаптивности
-function resizeCanvas() {
-  const windowWidth = window.innerWidth;
-  const windowHeight = window.innerHeight;
-  const aspectRatio = GAME_WIDTH / GAME_HEIGHT;
-
-  if (windowWidth / windowHeight > aspectRatio) {
-    canvas.height = windowHeight;
-    canvas.width = windowHeight * aspectRatio;
-  } else {
-    canvas.width = windowWidth;
-    canvas.height = windowWidth / aspectRatio;
-  }
-
-  scaleX = canvas.width / GAME_WIDTH;
-  scaleY = canvas.height / GAME_HEIGHT;
-}
 
 
-// Слушаем событие изменения размера окна
-window.addEventListener("resize", resizeCanvas);
 
-// Начальная настройка размера канваса
-resizeCanvas();
 
-// Обновлённый updateAnimation
-function updateAnimation(deltaTime) {
-  if (gameOver || isPaused) return;
 
-  const hitbox = getCharacterHitbox();
-
-  if (deltaTime - lastFrameTime > animationSpeed) {
-    lastFrameTime = deltaTime;
-    if (isJumping) jumpFrame = (jumpFrame + 1) % jumpFrames;
-    else currentFrame = (currentFrame + 1) % runFrames;
-  }
-
-  character.y += velocity;
-  velocity += gravity;
-
-  isGrounded = false;
-  for (let platform of platforms) {
-    if (
-      character.y + character.height >= platform.y &&
-      character.y + character.height <= platform.y + velocity + 5 &&
-      character.x + character.width > platform.x &&
-      character.x < platform.x + platform.width
-    ) {
-      character.y = platform.y - character.height;
-      velocity = 0;
-      isGrounded = true;
-      isJumping = false;
-      break;
-    }
-  }
-
-  for (let obs of obstacles) {
-    if (
-      hitbox.x < obs.x + obs.width &&
-      hitbox.x + hitbox.width > obs.x &&
-      hitbox.y < obs.y + obs.height &&
-      hitbox.y + hitbox.height > obs.y
-    ) {
-      gameOver = true;
-    }
-  }
-
-  for (let i = coins.length - 1; i >= 0; i--) {
-    const coin = coins[i];
-    if (
-      hitbox.x < coin.x + coin.size &&
-      hitbox.x + hitbox.width > coin.x &&
-      hitbox.y < coin.y + coin.size &&
-      hitbox.y + hitbox.height > coin.y
-    ) {
-      coins.splice(i, 1);
-      score += 10;
-    }
-  }
-
-  // Обновляем позиции платформ, препятствий и монет
-  platforms.forEach(p => p.x -= 3);
-  obstacles.forEach(o => o.x -= 3);
-  coins.forEach(c => c.x -= 3);
-
-  score += 0.05;
-
-  // Спавн новых платформ, препятствий и монет
-  if (platforms[platforms.length - 1].x + platforms[platforms.length - 1].width < canvas.width) {
-    const newX = platforms[platforms.length - 1].x + platforms[platforms.length - 1].width;
-    platforms.push({ x: newX, y: 320, width: 300 + Math.random() * 200, height: 20 });
-  }
-
-  if (Math.random() < 0.008) {
-    const isFlying = Math.random() < 0.5;
-  
-    if (isFlying) {
-      // Летающее препятствие — чуть выше игрока
-      const flyingY = character.y - 60;
-      obstacles.push({
-        x: canvas.width,
-        y: flyingY,
-        width: 30,
-        height: 30,
-        type: "flying"
-      });
-    } else {
-      // Обычное препятствие — на уровне земли (с учетом высоты платформы)
-      const groundY = platforms[platforms.length - 1].y - 30;
-      obstacles.push({
-        x: canvas.width,
-        y: groundY,
-        width: 30,
-        height: 30,
-        type: "ground"
-      });
-    }
-  }
   
 
-  if (Math.random() < 0.02) {
-    const randomY = Math.random() * (canvas.height - 50); // Высота для монеты
-    coins.push({ x: canvas.width, y: randomY, size: 32 });
-  }
-
-  // Убираем объекты, которые ушли за пределы экрана
-  platforms = platforms.filter(p => p.x + p.width > 0);
-  obstacles = obstacles.filter(o => o.x + o.width > 0);
-  coins = coins.filter(c => c.x + c.size > 0);
-}
-
-// Обработчик клика
-canvas.addEventListener('click', (e) => {
-  if (gameOver) {
-    restartGame();
-  } else if (!isJumping && isGrounded) {
-    velocity = jumpPower;
-    isJumping = true;
-  }
-});
-
-function drawCharacter() {
-  const sprite = isJumping ? jumpSprite : runSprite;
-  const frame = isJumping ? jumpFrame : currentFrame;
-
-  ctx.drawImage(
-    sprite,
-    frame * character.spriteWidth,
-    0,
-    character.spriteWidth,
-    character.spriteHeight,
-    character.x - character.offsetX,
-    character.y - character.offsetY,
-    character.spriteWidth,
-    character.spriteHeight
-  );
-
-  const hitbox = getCharacterHitbox();
-  ctx.strokeStyle = "red";
-  ctx.strokeRect(hitbox.x, hitbox.y, hitbox.width, hitbox.height);
-}
-
-function getCharacterHitbox() {
-  return {
-    x: character.x - character.offsetX + character.hitboxOffsetX,
-    y: character.y - character.offsetY + character.hitboxOffsetY,
-    width: character.width,
-    height: character.height
-  };
-}
-
-// Рисование с текстурами
-function drawPlatformsAndObstacles() {
-  ctx.fillStyle = "#654321";
-  platforms.forEach(p => ctx.fillRect(p.x, p.y, p.width, p.height));
-
-  obstacles.forEach(o => {
-    if (o.type === "flying" && flyingObstacleImage.complete) {
-      ctx.drawImage(flyingObstacleImage, o.x, o.y, o.width, o.height);
-    } else if (obstacleImage.complete) {
-      ctx.drawImage(obstacleImage, o.x, o.y, o.width, o.height);
-    } else {
-      ctx.fillStyle = "#ff0000";
-      ctx.fillRect(o.x, o.y, o.width, o.height);
-    }
-  });
-  
-}
-
-function drawCoins() {
-  coins.forEach(c => {
-    ctx.drawImage(coinImage, c.x, c.y, c.size, c.size);
-  });
-}
-
-function drawScore() {
-  ctx.fillStyle = "#000";
-  ctx.font = "24px Arial";
-  ctx.fillText("Очки: " + Math.floor(score), 20, 30);
-}
-
-function drawGameOverScreen() {
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#fff";
-  ctx.font = "36px Arial";
-  ctx.textAlign = "center";
-  ctx.fillText("Игра окончена", canvas.width / 2, canvas.height / 2 - 20);
-  ctx.font = "24px Arial";
-  ctx.fillText("Нажмите, чтобы начать заново", canvas.width / 2, canvas.height / 2 + 20);
-  ctx.textAlign = "left";
-}
-
-function drawBackground() {
-  ctx.fillStyle = "#d0f4f7";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-function restartGame() {
-  platforms = [{ x: 0, y: 320, width: 800, height: 20 }];
-  obstacles = [];
-  coins = [];
-  score = 0;
-  character.y = character.baseY;
-  velocity = 0;
-  gameOver = false;
-  currentFrame = 0;
-  jumpFrame = 0;
-}
-
-function gameLoop(currentTime) {
-  ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0); // масштабирование
-  drawBackground();
-  updateAnimation(currentTime);
-  drawPlatformsAndObstacles();
-  drawCoins();
-  drawCharacter();
-  drawScore();
-  if (gameOver) drawGameOverScreen();
-  requestAnimationFrame(gameLoop);
-}
-canvas.addEventListener('click', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / scaleX;
-  const y = (e.clientY - rect.top) / scaleY;
-
-  if (gameOver) {
-    restartGame();
-  } else if (!isJumping && isGrounded) {
-    velocity = jumpPower;
-    isJumping = true;
-  }
-});
 
 
-runSprite.onload = () => {
-  requestAnimationFrame(gameLoop);
-};
