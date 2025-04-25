@@ -88,22 +88,7 @@ window.onload = function() {
   // Setup pause button
   document.getElementById('pauseBtn').onclick = () => { isPaused = !isPaused; };
 
-  // Responsive canvas
-  function resizeCanvas() {
-    const ww = window.innerWidth;
-    const wh = window.innerHeight;
-    const ar = GAME_WIDTH / GAME_HEIGHT;
-    if (ww / wh > ar) {
-      canvas.height = wh;
-      canvas.width = wh * ar;
-    } else {
-      canvas.width = ww;
-      canvas.height = ww / ar;
-    }
-    scaleX = canvas.width / GAME_WIDTH;
-    scaleY = canvas.height / GAME_HEIGHT;
-  }
-  window.addEventListener('resize', resizeCanvas);
+
 
   // Input
   canvas.addEventListener('click', handleInput);
@@ -120,7 +105,7 @@ window.onload = function() {
 
   // Initialize game after backgrounds loaded
   function initGame() {
-    //resizeCanvas();
+
     requestAnimationFrame(gameLoop);
   }
 
