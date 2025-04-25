@@ -1,16 +1,13 @@
 // game.js
 window.onload = function() {
-  const canvas = document.getElementById("gameCanvas");
-  const ctx    = canvas.getContext("2d");
+  const canvas     = document.getElementById("gameCanvas");
+  const container  = document.getElementById("gameContainer");
+  const ctx        = canvas.getContext("2d");
 
   
   // Фиксируем внутреннее разрешение канваса
-  const GAME_WIDTH  = 400;
-  const GAME_HEIGHT = 800;
-  canvas.width  = GAME_WIDTH;
-  canvas.height = GAME_HEIGHT;
-  let scaleX = canvas.width  / GAME_WIDTH;
-  let scaleY = canvas.height / GAME_HEIGHT;
+  const GAME_W = 400, GAME_H = 800;
+  let scaleX = 1, scaleY = 1;
   let scrollOffset = 0;
   const gameSpeed = 3;
 
@@ -58,18 +55,41 @@ window.onload = function() {
     { file: '01_ground.png', speed: 1, img: new Image() }
   ];
 
-  function resizeCanvasResolution() {
+  function onResize() {
     const isLandscape = window.innerWidth > window.innerHeight;
+
+    // 1) внутренняя "виртуальная" ориентация
     if (isLandscape) {
-      canvas.width  = GAME_HEIGHT;
-      canvas.height = GAME_WIDTH;
+      canvas.width  = GAME_H;
+      canvas.height = GAME_W;
     } else {
-      canvas.width  = GAME_WIDTH;
-      canvas.height = GAME_HEIGHT;
+      canvas.width  = GAME_W;
+      canvas.height = GAME_H;
     }
+
+    // 2) CSS-масштаб, чтобы вписаться в экран по максимуму
+    const ar = canvas.width / canvas.height;
+    const ww = window.innerWidth;
+    const wh = window.innerHeight;
+
+    let cssW, cssH;
+    if (ww / wh > ar) {
+      cssH = wh; 
+      cssW = wh * ar;
+    } else {
+      cssW = ww; 
+      cssH = ww / ar;
+    }
+    // центруем
+    container.style.width  = cssW + "px";
+    container.style.height = cssH + "px";
+
+    // 3) обновляем коэффициенты для UI (если нужны)
+    scaleX = cssW / GAME_W;
+    scaleY = cssH / GAME_H;
   }
-  window.addEventListener('resize', resizeCanvasResolution);
-  resizeCanvasResolution();
+  window.addEventListener("resize", onResize);
+  onResize(); // и сразу
   let loadedBg = 0;
   bgLayers.forEach(layer => {
     layer.img.src = layer.file;
@@ -218,7 +238,6 @@ window.onload = function() {
   
     requestAnimationFrame(gameLoop);
   }
-  
 };
 
 
