@@ -9,7 +9,7 @@ window.onload = function() {
   const GAME_H = 800;
 
   // Параметры игры
-  const gameSpeed = 3;
+  let gameSpeed = 3.0;
   const gravity   = 0.6;
   const jumpPower = -14;
   const runFrames      = 15;
