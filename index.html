@@ -41,6 +41,15 @@
       border-radius: 4px;
       cursor: pointer;
     }
+      /* Поддержка горизонтальной ориентации */
+    @media (orientation: landscape) {
+      #gameContainer {
+        aspect-ratio: 2/1; /* ширина:высота 800:400 */
+        max-width: 100vh;  /* ограничение по высоте экрана */
+        max-height: 100vw;
+      }
+    }
+
   </style>
 </head>
 <body>
