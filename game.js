@@ -33,7 +33,7 @@ window.onload = function() {
 
   // Персонаж
   const character = {
-    x:100, y:200, baseY:200,
+    x:100, y:500, baseY:200,
     spriteW:128, spriteH:118,
     offX:34, offY:7,
     w:30, h:90,
@@ -41,7 +41,7 @@ window.onload = function() {
   };
 
   // Платформы, препятствия и монеты
-  let platforms = [{ x:0, y:320, w:800, h:20 }];
+  let platforms = [{ x:0, y:650, w:800, h:20 }];
   let obstacles = [];
   let coins     = [];
 
@@ -229,7 +229,7 @@ window.onload = function() {
     if (lastPlat.x + lastPlat.w < canvas.width) {
       platforms.push({
         x: lastPlat.x + lastPlat.w,
-        y: 320,
+        y: 650,
         w: 300 + Math.random()*200,
         h: 20
       });
@@ -237,17 +237,29 @@ window.onload = function() {
 
     // Новые препятствия и монеты
     if (Math.random() < 0.008) {
-      const y = Math.random() < 0.5
-        ? character.y - 60
-        : platforms[platforms.length-1].y - 30;
-      obstacles.push({ x: canvas.width, y, w:30, h:30 });
+      const lastObstacle = obstacles[obstacles.length - 1];
+      const minDistance = 200; // минимальное расстояние между препятствиями
+    
+      if (!lastObstacle || (canvas.width - lastObstacle.x) > minDistance) {
+        const platform = platforms[platforms.length - 1];
+        const y = platform.y - 30;
+        obstacles.push({ x: canvas.width, y, w: 30, h: 30 });
+      }
     }
-    if (Math.random() < 0.02) {
-      coins.push({
-        x: canvas.width,
-        y: Math.random() * (canvas.height - 50),
-        size: 32
-      });
+    
+    
+    
+    if (Math.random() < 0.008) {
+      const lastCoin = coins[coins.length - 1];
+      const minCoinDistance = 100;
+    
+      if (!lastCoin || (canvas.width - lastCoin.x) > minCoinDistance) {
+        const platform = platforms[platforms.length - 1];
+        const coinX = canvas.width;
+        const coinY = platform.y - (40 + Math.random() * 30);
+
+        coins.push({ x: coinX, y: coinY });
+      }
     }
   }
 
@@ -282,21 +294,21 @@ window.onload = function() {
 
   function drawScore() {
     ctx.fillStyle = '#000';
-    ctx.font      = `${24 * scaleY}px Arial`;
-    ctx.fillText(`Очки: ${Math.floor(score)}`, 20 * scaleX, 30 * scaleY);
+    ctx.font = '32px Arial';
+    ctx.fillText('Score: ' + Math.floor(score), 20, 40);
   }
 
   function drawGameOver() {
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle   = '#fff';
-    ctx.textAlign   = 'center';
-    ctx.font        = `${36 * scaleY}px Arial`;
-    ctx.fillText('Игра окончена',      canvas.width / 2, canvas.height / 2 - 20);
-    ctx.font        = `${24 * scaleY}px Arial`;
-    ctx.fillText('Клик для рестарта', canvas.width / 2, canvas.height / 2 + 20);
-    ctx.textAlign   = 'left';
+    ctx.fillStyle = '#fff';
+    ctx.font = '48px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2 - 20);
+    ctx.font = '24px Arial';
+    ctx.fillText('Click to restart', canvas.width / 2, canvas.height / 2 + 20);
+    ctx.textAlign = 'left';
   }
 
   function getHitbox() {
@@ -308,14 +320,25 @@ window.onload = function() {
     };
   }
 
-  function restartGame() {
-    platforms = [{ x:0, y:320, w:800, h:20 }];
-    obstacles = [];
-    coins     = [];
-    score     = 0;
+function restartGame() {
+    // Сброс состояний
+    scrollOffset = 0;
+    currentFrame = 0;
+    jumpFrame = 0;
+    lastFrameTime = 0;
+    isJumping = false;
+    isGrounded = true;
+    velocity = 0;
+    score = 0;
+    isPaused = false;
+    gameOver = false;
+
+    // Сброс позиции персонажа
     character.y = character.baseY;
-    velocity    = 0;
-    currentFrame = jumpFrame = lastFrameTime = 0;
-    gameOver     = false;
+
+    // Сброс объектов
+    platforms = [{ x: 0, y: 650, w: 800, h: 20 }];
+    obstacles = [];
+    coins = [];
   }
 };
